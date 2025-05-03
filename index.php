@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>fredometer AI assistant</title>
+    <title>Unimaid Resources AI</title>
     <style>
     body {
         font-family: 'Segoe UI', sans-serif;
@@ -139,7 +139,7 @@
     <div id="chat-container">
         <div class="chat-header">
             <img src="https://via.placeholder.com/40" alt="AI" />
-            <span>fredometer AI assistant</span>
+            <span>Unimaid Resources AI</span>
         </div>
         <div id="chat-box"></div>
         <div class="input-container">
