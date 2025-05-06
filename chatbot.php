@@ -1,5 +1,5 @@
 <?php
-// Allow frontend apps (from any domain) to access this endpoint
+//here we Allow frontend apps (from any domain) to access this endpoint
 header("Access-Control-Allow-Origin: *");
 
 // Response will always be in JSON format
@@ -31,6 +31,7 @@ function sanitizeInput($input)
 {
     return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
 }
+//you can also remove the db connection and make it a file and just include the file route here, just the way you like it sir
 
 // Database connection config
 $servername = "localhost";
