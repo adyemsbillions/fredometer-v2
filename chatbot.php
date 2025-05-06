@@ -26,6 +26,12 @@ function respondWithError($code, $msg, $extra = [])
     exit;
 }
 
+// Sanitize user input to prevent SQL injection
+function sanitizeInput($input)
+{
+    return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
+}
+
 // Database connection config
 $servername = "localhost";
 $username = "root";
@@ -66,8 +72,8 @@ if (empty($input['message'])) {
     respondWithError(400, 'Missing "message"');
 }
 
-// Clean the user message
-$user_message = trim($input['message']);
+// Clean and sanitize the user message
+$user_message = sanitizeInput($input['message']);
 
 // Check if the message is related to baselinedata, pindata, or severitydata
 $is_related = isRelatedToData($user_message, $conn);
@@ -178,7 +184,9 @@ function isRelatedToData($message, $conn)
         'sector',
         'health',
         'education',
-        'protection' // Common sectors
+        'protection',
+        'people in need',
+        'in need'
     ];
     $message_lower = strtolower($message);
 
@@ -211,15 +219,9 @@ function isRelatedToData($message, $conn)
     foreach ($tables as $table) {
         foreach ($varchar_columns as $column) {
             // Skip columns not in the table
-            if ($table === 'baselinedata' && $column === 'Sector') {
-                continue;
-            }
-            if ($table === 'baselinedata' && $column === 'LGA_pCode') {
-                continue;
-            }
-            if (($table === 'pindata' || $table === 'severitydata') && $column === 'LGA_Pcode') {
-                continue;
-            }
+            if ($table === 'baselinedata' && $column === 'Sector') continue;
+            if ($table === 'baselinedata' && $column === 'LGA_pCode') continue;
+            if (($table === 'pindata' || $table === 'severitydata') && $column === 'LGA_Pcode') continue;
             $stmt = $conn->prepare("SELECT 1 FROM $table WHERE $column = ? LIMIT 1");
             if ($stmt) {
                 $stmt->bind_param("s", $message);
@@ -268,31 +270,31 @@ function buildPayload($message, $data, $is_related)
     $table_structure .= "- Host_Community_Men (int): Number of host community men\n";
     $table_structure .= "- Host_Community_Elderly_Women (int): Number of host community elderly women\n";
     $table_structure .= "- Host_Community_Elderly_Men (int): Number of host community elderly men\n\n";
-    $table_structure .= "**pindata table** (sector-specific intervention data):\n";
+    $table_structure .= "**pindata table** (People in Need Data, detailing populations requiring assistance across sectors like Health, Education, Protection):\n";
     $table_structure .= "- Response_Year (int): Year of the data\n";
-    $table_structure .= "- Sector (varchar): Sector of intervention (e.g., Health, Education, Protection)\n";
+    $table_structure .= "- Sector (varchar): Sector of need (e.g., Health, Education, Protection)\n";
     $table_structure .= "- State (varchar): State name (e.g., Borno, Adamawa)\n";
     $table_structure .= "- State_Pcode (varchar): State postal code (e.g., NG002)\n";
     $table_structure .= "- LGA (varchar): Local Government Area (e.g., Fufore, Maiduguri)\n";
     $table_structure .= "- LGA_pCode (varchar): LGA postal code (e.g., NGM001)\n";
-    $table_structure .= "- IDP_Girls (int): Number of internally displaced girls\n";
-    $table_structure .= "- IDP_Boys (int): Number of internally displaced boys\n";
-    $table_structure .= "- IDP_Women (int): Number of internally displaced women\n";
-    $table_structure .= "- IDP_Men (int): Number of internally displaced men\n";
-    $table_structure .= "- IDP_Elderly_Women (int): Number of internally displaced elderly women\n";
-    $table_structure .= "- IDP_Elderly_Men (int): Number of internally displaced elderly men\n";
-    $table_structure .= "- Returnee_Girls (int): Number of returnee girls\n";
-    $table_structure .= "- Returnee_Boys (int): Number of returnee boys\n";
-    $table_structure .= "- Returnee_Women (int): Number of returnee women\n";
-    $table_structure .= "- Returnee_Men (int): Number of returnee men\n";
-    $table_structure .= "- Returnee_Elderly_Women (int): Number of returnee elderly women\n";
-    $table_structure .= "- Returnee_Elderly_Men (int): Number of returnee elderly men\n";
-    $table_structure .= "- Host_Community_Girls (int): Number of host community girls\n";
-    $table_structure .= "- Host_Community_Boys (int): Number of host community boys\n";
-    $table_structure .= "- Host_Community_Women (int): Number of host community women\n";
-    $table_structure .= "- Host_Community_Men (int): Number of host community men\n";
-    $table_structure .= "- Host_Community_Elderly_Women (int): Number of host community elderly women\n";
-    $table_structure .= "- Host_Community_Elderly_Men (int): Number of host community elderly men\n\n";
+    $table_structure .= "- IDP_Girls (int): Number of internally displaced girls in need\n";
+    $table_structure .= "- IDP_Boys (int): Number of internally displaced boys in need\n";
+    $table_structure .= "- IDP_Women (int): Number of internally displaced women in need\n";
+    $table_structure .= "- IDP_Men (int): Number of internally displaced men in need\n";
+    $table_structure .= "- IDP_Elderly_Women (int): Number of internally displaced elderly women in need\n";
+    $table_structure .= "- IDP_Elderly_Men (int): Number of internally displaced elderly men in need\n";
+    $table_structure .= "- Returnee_Girls (int): Number of returnee girls in need\n";
+    $table_structure .= "- Returnee_Boys (int): Number of returnee boys in need\n";
+    $table_structure .= "- Returnee_Women (int): Number of returnee women in need\n";
+    $table_structure .= "- Returnee_Men (int): Number of returnee men in need\n";
+    $table_structure .= "- Returnee_Elderly_Women (int): Number of returnee elderly women in need\n";
+    $table_structure .= "- Returnee_Elderly_Men (int): Number of returnee elderly men in need\n";
+    $table_structure .= "- Host_Community_Girls (int): Number of host community girls in need\n";
+    $table_structure .= "- Host_Community_Boys (int): Number of host community boys in need\n";
+    $table_structure .= "- Host_Community_Women (int): Number of host community women in need\n";
+    $table_structure .= "- Host_Community_Men (int): Number of host community men in need\n";
+    $table_structure .= "- Host_Community_Elderly_Women (int): Number of host community elderly women in need\n";
+    $table_structure .= "- Host_Community_Elderly_Men (int): Number of host community elderly men in need\n\n";
     $table_structure .= "**severitydata table** (severity metrics):\n";
     $table_structure .= "- Response_Year (int): Year of the data\n";
     $table_structure .= "- Sector (varchar): Sector of intervention (e.g., Health, Education, Protection)\n";
@@ -313,7 +315,7 @@ function buildPayload($message, $data, $is_related)
             foreach (['State', 'State_Pcode', 'LGA', 'LGA_Pcode', 'LGA_pCode', 'Sector'] as $column) {
                 $col_key = ($column === 'LGA_Pcode' || $column === 'LGA_pCode') ? 'LGA_Pcode/LGA_pCode' : $column;
                 if (strtolower($message) === strtolower($col_key) || strpos(strtolower($message), strtolower($col_key)) !== false) {
-                    continue; // Skip if the message is the column name itself
+                    continue;
                 }
                 $matches = [];
                 foreach (['baselinedata', 'pindata', 'severitydata'] as $table) {
@@ -332,7 +334,7 @@ function buildPayload($message, $data, $is_related)
                 }
             }
             if (!empty($tables_with_value)) {
-                $value_note = "Note: " . implode(" ", $tables_with_value) . " baselinedata provides general demographic data, pindata focuses on sector-specific interventions, and severitydata tracks severity metrics.\n\n";
+                $value_note = "Note: " . implode(" ", $tables_with_value) . " baselinedata provides general demographic data, pindata details People in Need Data (populations requiring assistance), and severitydata tracks severity metrics.\n\n";
             }
         }
 
@@ -342,7 +344,7 @@ function buildPayload($message, $data, $is_related)
             $data_summary .= "No specific data found for the query.\n";
         } else {
             if (!empty($data['baselinedata'])) {
-                $data_summary .= "**From baselinedata**:\n";
+                $data_summary .= "**From baselinedata** (general demographic data):\n";
                 foreach ($data['baselinedata'] as $row) {
                     $data_summary .= sprintf(
                         "- Year: %s, State: %s, State_Pcode: %s, LGA: %s, LGA_Pcode: %s, " .
@@ -379,7 +381,7 @@ function buildPayload($message, $data, $is_related)
                 }
             }
             if (!empty($data['pindata'])) {
-                $data_summary .= "**From pindata**:\n";
+                $data_summary .= "**From pindata** (People in Need Data):\n";
                 foreach ($data['pindata'] as $row) {
                     $data_summary .= sprintf(
                         "- Year: %s, Sector: %s, State: %s, State_Pcode: %s, LGA: %s, LGA_pCode: %s, " .
@@ -417,7 +419,7 @@ function buildPayload($message, $data, $is_related)
                 }
             }
             if (!empty($data['severitydata'])) {
-                $data_summary .= "**From severitydata**:\n";
+                $data_summary .= "**From severitydata** (severity metrics):\n";
                 foreach ($data['severitydata'] as $row) {
                     $data_summary .= sprintf(
                         "- Year: %s, Sector: %s, State: %s, State_Pcode: %s, LGA: %s, LGA_pCode: %s, " .
@@ -436,10 +438,9 @@ function buildPayload($message, $data, $is_related)
                 }
             }
         }
-        $prompt = "You are FREDOMETER ASSISTANT, an expert on the baselinedata, pindata, and severitydata tables in the fredometer database. User asked: '$message'\n\nTable structures:\n$table_structure\n\n$data_summary\nProvide a precise, conversational answer with Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate. Use the table structures and data to answer accurately, focusing on the specific values or columns mentioned (e.g., LGA like Fufore, State_Pcode like NG002, Sector like Health, IDP, Final). If a value appears in multiple tables, note this as shown in the data summary and explain the context of each table. If no data is relevant, explain clearly and suggest related questions about any of the three tables.";
+        $prompt = "You are FREDOMETER ASSISTANT, an expert on the baselinedata, pindata, and severitydata tables in the fredometer database. User asked: '$message'\n\nTable structures:\n$table_structure\n\n$data_summary\nProvide a precise, conversational answer with Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate. Use the table structures and data to answer accurately, focusing on the specific values or columns mentioned (e.g., LGA like Fufore, State_Pcode like NG002, Sector like Health, IDP, Final). Note that pindata represents People in Need Data, detailing populations requiring assistance. If a value appears in multiple tables, note this as shown in the data summary and explain the context of each table (baselinedata: demographics, pindata: People in Need Data, severitydata: severity metrics). If no data is relevant, explain clearly and suggest related questions about any of the three tables.";
     } else {
-        // Smart response for unrelated questions
-        $prompt = "You are FREDOMETER ASSISTANT, specialized in the baselinedata, pindata, and severitydata tables in the fredometer database. User asked: '$message'\n\nTable structures:\n$table_structure\n\nThis question seems unrelated to the baselinedata, pindata, or severitydata tables. Respond in a friendly, conversational tone with Markdown formatting, explaining that you focus on data like **IDP_Girls**, **LGA** (e.g., Fufore), **State_Pcode** (e.g., NG002), **Sector** (e.g., Health), or **Final** and suggesting the user ask a relevant question about any table's data or structure. Do not offer to browse the internet.";
+        $prompt = "You are FREDOMETER ASSISTANT, a knowledgeable AI specialized in the baselinedata, pindata, and severitydata tables in the fredometer database. User asked: '$message'\n\nThis question does not appear to be related to the fredometer database. Provide a concise, accurate, and conversational answer to the user's question using Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate. If the question is vague, offer a clear response and suggest asking about the fredometer database (e.g., **IDP_Girls**, **LGA** like Fufore, **Sector** like Health, or **Final** in pindata for People in Need Data) for more specific insights.";
     }
     return [
         'contents' => [
@@ -555,9 +556,7 @@ function fetchData($message, $conn)
 
         // Filter by specific column mentions
         foreach ($table_columns as $column) {
-            if ($column === 'Sector' && $table === 'baselinedata') {
-                continue;
-            }
+            if ($column === 'Sector' && $table === 'baselinedata') continue;
             if (strpos($message_lower, strtolower(str_replace('_', ' ', $column))) !== false) {
                 $conditions[] = "$column IS NOT NULL AND $column != 0";
             }
@@ -568,15 +567,9 @@ function fetchData($message, $conn)
             ['State', 'State_Pcode', 'LGA', 'LGA_pCode', 'Sector'] :
             ['State', 'State_Pcode', 'LGA', 'LGA_Pcode'];
         foreach ($varchar_columns as $column) {
-            if ($column === 'Sector' && $table === 'baselinedata') {
-                continue;
-            }
-            if ($column === 'LGA_pCode' && $table === 'baselinedata') {
-                continue;
-            }
-            if ($column === 'LGA_Pcode' && ($table === 'pindata' || $table === 'severitydata')) {
-                continue;
-            }
+            if ($column === 'Sector' && $table === 'baselinedata') continue;
+            if ($column === 'LGA_pCode' && $table === 'baselinedata') continue;
+            if ($column === 'LGA_Pcode' && ($table === 'pindata' || $table === 'severitydata')) continue;
             $conditions[] = "$column = ?";
             $params[] = $message;
             $types .= "s";

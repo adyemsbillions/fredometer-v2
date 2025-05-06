@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FREDOMETER ASSITANT</title>
+    <title>FREDOMETER ASSISTANT</title>
     <style>
     body {
         font-family: 'Segoe UI', sans-serif;
@@ -12,7 +12,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        min-height: 100vh;
         margin: 0;
     }
 
@@ -132,6 +132,51 @@
         color: #357abd;
         text-decoration: underline;
     }
+
+    /* Desktop responsiveness */
+    @media (min-width: 768px) {
+        #chat-container {
+            max-width: 800px;
+            height: 80vh;
+            max-height: 900px;
+        }
+
+        .chat-header {
+            padding: 20px;
+            font-size: 22px;
+        }
+
+        .chat-header img {
+            width: 45px;
+            height: 45px;
+        }
+
+        #chat-box {
+            padding: 30px;
+            gap: 15px;
+        }
+
+        .message {
+            padding: 15px 20px;
+            font-size: 16px;
+            max-width: 70%;
+        }
+
+        #user-input {
+            padding: 12px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+        }
+
+        .input-container {
+            padding: 15px;
+        }
+    }
     </style>
 </head>
 
@@ -139,7 +184,7 @@
     <div id="chat-container">
         <div class="chat-header">
             <img src="https://via.placeholder.com/40" alt="AI" />
-            <span>FREDOMETER ASSITANT</span>
+            <span>FREDOMETER ASSISTANT</span>
         </div>
         <div id="chat-box"></div>
         <div class="input-container">
@@ -202,6 +247,13 @@
             chatBox.appendChild(errDiv);
         }
     }
+
+    // Enable sending message with Enter key
+    document.getElementById('user-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
     </script>
 </body>
 
