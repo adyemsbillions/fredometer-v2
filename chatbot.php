@@ -75,7 +75,7 @@ if (empty($input['message'])) {
 // Clean and sanitize the user message
 $user_message = sanitizeInput($input['message']);
 
-// Check if the message is related to baselinedata, pindata, or severitydata
+// Check if the message is related to demographic or assistance data
 $is_related = isRelatedToData($user_message, $conn);
 
 // Check if the question is specifically about "in need"
@@ -119,7 +119,7 @@ echo json_encode([
 
 // === Helpers === //
 
-// Check if the message is related to baselinedata, pindata, or severitydata
+// Check if the message is related to demographic or assistance data
 function isRelatedToData($message, $conn)
 {
     // Column names from all tables
@@ -253,116 +253,131 @@ function isRelatedToData($message, $conn)
 // Structure the user message and data for Gemini
 function buildPayload($message, $data, $is_related, $is_in_need = false)
 {
-    // Table structures for context
-    $table_structure = "The fredometer database has three tables: baselinedata, pindata, and severitydata.\n\n";
-    $table_structure .= "**baselinedata table** (general demographic data):\n";
-    $table_structure .= "- Response_Year (int): Year of the data\n";
-    $table_structure .= "- State (varchar): State name (e.g., Borno, Adamawa)\n";
-    $table_structure .= "- State_Pcode (varchar): State postal code (e.g., NG002)\n";
-    $table_structure .= "- LGA (varchar): Local Government Area (e.g., Fufore, Maiduguri)\n";
-    $table_structure .= "- LGA_Pcode (varchar): LGA postal code (e.g., NGM001)\n";
-    $table_structure .= "- IDP_Girls (int): Number of internally displaced girls\n";
-    $table_structure .= "- IDP_Boys (int): Number of internally displaced boys\n";
-    $table_structure .= "- IDP_Women (int): Number of internally displaced women\n";
-    $table_structure .= "- IDP_Men (int): Number of internally displaced men\n";
-    $table_structure .= "- IDP_Elderly_Women (int): Number of internally displaced elderly women\n";
-    $table_structure .= "- IDP_Elderly_Men (int): Number of internally displaced elderly men\n";
-    $table_structure .= "- Returnee_Girls (int): Number of returnee girls\n";
-    $table_structure .= "- Returnee_Boys (int): Number of returnee boys\n";
-    $table_structure .= "- Returnee_Women (int): Number of returnee women\n";
-    $table_structure .= "- Returnee_Men (int): Number of returnee men\n";
-    $table_structure .= "- Returnee_Elderly_Women (int): Number of returnee elderly women\n";
-    $table_structure .= "- Returnee_Elderly_Men (int): Number of returnee elderly men\n";
-    $table_structure .= "- Host_Community_Girls (int): Number of host community girls\n";
-    $table_structure .= "- Host_Community_Boys (int): Number of host community boys\n";
-    $table_structure .= "- Host_Community_Women (int): Number of host community women\n";
-    $table_structure .= "- Host_Community_Men (int): Number of host community men\n";
-    $table_structure .= "- Host_Community_Elderly_Women (int): Number of host community elderly women\n";
-    $table_structure .= "- Host_Community_Elderly_Men (int): Number of host community elderly men\n\n";
-    $table_structure .= "**pindata table** (People in Need Data, detailing populations requiring assistance across sectors like Health, Education, Protection):\n";
-    $table_structure .= "- Response_Year (int): Year of the data\n";
-    $table_structure .= "- Sector (varchar): Sector of need (e.g., Health, Education, Protection)\n";
-    $table_structure .= "- State (varchar): State name (e.g., Borno, Adamawa)\n";
-    $table_structure .= "- State_Pcode (varchar): State postal code (e.g., NG002)\n";
-    $table_structure .= "- LGA (varchar): Local Government Area (e.g., Fufore, Maiduguri)\n";
-    $table_structure .= "- LGA_pCode (varchar): LGA postal code (e.g., NGM001)\n";
-    $table_structure .= "- IDP_Girls (int): Number of internally displaced girls in need\n";
-    $table_structure .= "- IDP_Boys (int): Number of internally displaced boys in need\n";
-    $table_structure .= "- IDP_Women (int): Number of internally displaced women in need\n";
-    $table_structure .= "- IDP_Men (int): Number of internally displaced men in need\n";
-    $table_structure .= "- IDP_Elderly_Women (int): Number of internally displaced elderly women in need\n";
-    $table_structure .= "- IDP_Elderly_Men (int): Number of internally displaced elderly men in need\n";
-    $table_structure .= "- Returnee_Girls (int): Number of returnee girls in need\n";
-    $table_structure .= "- Returnee_Boys (int): Number of returnee boys in need\n";
-    $table_structure .= "- Returnee_Women (int): Number of returnee women in need\n";
-    $table_structure .= "- Returnee_Men (int): Number of returnee men in need\n";
-    $table_structure .= "- Returnee_Elderly_Women (int): Number of returnee elderly women in need\n";
-    $table_structure .= "- Returnee_Elderly_Men (int): Number of returnee elderly men in need\n";
-    $table_structure .= "- Host_Community_Girls (int): Number of host community girls in need\n";
-    $table_structure .= "- Host_Community_Boys (int): Number of host community boys in need\n";
-    $table_structure .= "- Host_Community_Women (int): Number of host community women in need\n";
-    $table_structure .= "- Host_Community_Men (int): Number of host community men in need\n";
-    $table_structure .= "- Host_Community_Elderly_Women (int): Number of host community elderly women in need\n";
-    $table_structure .= "- Host_Community_Elderly_Men (int): Number of host community elderly men in need\n\n";
-    $table_structure .= "**severitydata table** (severity metrics):\n";
-    $table_structure .= "- Response_Year (int): Year of the data\n";
-    $table_structure .= "- Sector (varchar): Sector of intervention (e.g., Health, Education, Protection)\n";
-    $table_structure .= "- State (varchar): State name (e.g., Borno, Adamawa)\n";
-    $table_structure .= "- State_Pcode (varchar): State postal code (e.g., NG002)\n";
-    $table_structure .= "- LGA (varchar): Local Government Area (e.g., Fufore, Maiduguri)\n";
-    $table_structure .= "- LGA_pCode (varchar): LGA postal code (e.g., NGM001)\n";
-    $table_structure .= "- IDP (int): Number of internally displaced persons\n";
-    $table_structure .= "- Returnees (int): Number of returnees\n";
-    $table_structure .= "- Host_Community (int): Number of host community members\n";
-    $table_structure .= "- Final (int): Final severity score or count\n";
+    $is_detailed = stripos($message, 'in detailed') !== false;
 
     if ($is_related) {
         if ($is_in_need) {
-            // Summarize only pindata for "in need" questions
-            $data_summary = "Relevant data from pindata (People in Need Data):\n";
+            // Summarize pindata for "in need" questions
+            $data_summary = "Relevant data for populations requiring assistance:\n";
             if (empty($data['pindata'])) {
-                $data_summary .= "No specific data found for the query in pindata.\n";
+                $data_summary .= "No specific data found for the query.\n";
             } else {
-                $data_summary .= "**From pindata**:\n";
+                // Sum numerical columns for non-detailed queries
+                $sums = [
+                    'IDP_Girls' => 0,
+                    'IDP_Boys' => 0,
+                    'IDP_Women' => 0,
+                    'IDP_Men' => 0,
+                    'IDP_Elderly_Women' => 0,
+                    'IDP_Elderly_Men' => 0,
+                    'Returnee_Girls' => 0,
+                    'Returnee_Boys' => 0,
+                    'Returnee_Women' => 0,
+                    'Returnee_Men' => 0,
+                    'Returnee_Elderly_Women' => 0,
+                    'Returnee_Elderly_Men' => 0,
+                    'Host_Community_Girls' => 0,
+                    'Host_Community_Boys' => 0,
+                    'Host_Community_Women' => 0,
+                    'Host_Community_Men' => 0,
+                    'Host_Community_Elderly_Women' => 0,
+                    'Host_Community_Elderly_Men' => 0
+                ];
+                $sectors = [];
+                $locations = [];
+                $years = [];
+
                 foreach ($data['pindata'] as $row) {
-                    $data_summary .= sprintf(
-                        "- Year: %s, Sector: %s, State: %s, State_Pcode: %s, LGA: %s, LGA_pCode: %s, " .
-                            "IDP Girls: %d, IDP Boys: %d, IDP Women: %d, IDP Men: %d, " .
-                            "IDP Elderly Women: %d, IDP Elderly Men: %d, " .
-                            "Returnee Girls: %d, Returnee Boys: %d, Returnee Women: %d, Returnee Men: %d, " .
-                            "Returnee Elderly Women: %d, Returnee Elderly Men: %d, " .
-                            "Host Community Girls: %d, Host Community Boys: %d, Host Community Women: %d, Host Community Men: %d, " .
-                            "Host Community Elderly Women: %d, Host Community Elderly Men: %d\n",
-                        $row['Response_Year'] ?? 'N/A',
-                        $row['Sector'] ?? 'N/A',
-                        $row['State'] ?? 'N/A',
-                        $row['State_Pcode'] ?? 'N/A',
-                        $row['LGA'] ?? 'N/A',
-                        $row['LGA_pCode'] ?? 'N/A',
-                        $row['IDP_Girls'] ?? 0,
-                        $row['IDP_Boys'] ?? 0,
-                        $row['IDP_Women'] ?? 0,
-                        $row['IDP_Men'] ?? 0,
-                        $row['IDP_Elderly_Women'] ?? 0,
-                        $row['IDP_Elderly_Men'] ?? 0,
-                        $row['Returnee_Girls'] ?? 0,
-                        $row['Returnee_Boys'] ?? 0,
-                        $row['Returnee_Women'] ?? 0,
-                        $row['Returnee_Men'] ?? 0,
-                        $row['Returnee_Elderly_Women'] ?? 0,
-                        $row['Returnee_Elderly_Men'] ?? 0,
-                        $row['Host_Community_Girls'] ?? 0,
-                        $row['Host_Community_Boys'] ?? 0,
-                        $row['Host_Community_Women'] ?? 0,
-                        $row['Host_Community_Men'] ?? 0,
-                        $row['Host_Community_Elderly_Women'] ?? 0,
-                        $row['Host_Community_Elderly_Men'] ?? 0
-                    );
+                    foreach ($sums as $key => &$value) {
+                        $value += $row[$key] ?? 0;
+                    }
+                    if (!empty($row['Sector'])) {
+                        $sectors[$row['Sector']] = true;
+                    }
+                    if (!empty($row['State']) || !empty($row['LGA'])) {
+                        $locations[] = ($row['LGA'] ?? $row['State'] ?? 'Unknown');
+                    }
+                    if (!empty($row['Response_Year'])) {
+                        $years[$row['Response_Year']] = true;
+                    }
+                }
+
+                if (!$is_detailed) {
+                    // Provide summed totals for queried groups
+                    if (strpos(strtolower($message), 'women') !== false) {
+                        $total_women = $sums['IDP_Women'] + $sums['Returnee_Women'] + $sums['Host_Community_Women'] +
+                            $sums['IDP_Elderly_Women'] + $sums['Returnee_Elderly_Women'] + $sums['Host_Community_Elderly_Women'];
+                        $data_summary .= sprintf("Total women requiring assistance: %d\n", $total_women);
+                    } elseif (strpos(strtolower($message), 'men') !== false) {
+                        $total_men = $sums['IDP_Men'] + $sums['Returnee_Men'] + $sums['Host_Community_Men'] +
+                            $sums['IDP_Elderly_Men'] + $sums['Returnee_Elderly_Men'] + $sums['Host_Community_Elderly_Men'];
+                        $data_summary .= sprintf("Total men requiring assistance: %d\n", $total_men);
+                    } elseif (strpos(strtolower($message), 'girls') !== false) {
+                        $total_girls = $sums['IDP_Girls'] + $sums['Returnee_Girls'] + $sums['Host_Community_Girls'];
+                        $data_summary .= sprintf("Total girls requiring assistance: %d\n", $total_girls);
+                    } elseif (strpos(strtolower($message), 'boys') !== false) {
+                        $total_boys = $sums['IDP_Boys'] + $sums['Returnee_Boys'] + $sums['Host_Community_Boys'];
+                        $data_summary .= sprintf("Total boys requiring assistance: %d\n", $total_boys);
+                    } else {
+                        foreach ($sums as $key => $value) {
+                            if (strpos(strtolower($message), strtolower(str_replace('_', ' ', $key))) !== false && $value > 0) {
+                                $data_summary .= sprintf("Total %s requiring assistance: %d\n", str_replace('_', ' ', $key), $value);
+                            }
+                        }
+                    }
+                    if (!empty($sectors)) {
+                        $data_summary .= sprintf("Sectors: %s\n", implode(', ', array_keys($sectors)));
+                    }
+                    if (!empty($locations)) {
+                        $data_summary .= sprintf("Locations: %s\n", implode(', ', array_unique($locations)));
+                    }
+                    if (!empty($years)) {
+                        $data_summary .= sprintf("Years: %s\n", implode(', ', array_keys($years)));
+                    }
+                } else {
+                    // Detailed breakdown
+                    $data_summary .= "Detailed data for populations requiring assistance:\n";
+                    foreach ($data['pindata'] as $row) {
+                        $data_summary .= sprintf(
+                            "- Year: %s, Sector: %s, Location: %s, " .
+                                "IDP Girls: %d, IDP Boys: %d, IDP Women: %d, IDP Men: %d, " .
+                                "IDP Elderly Women: %d, IDP Elderly Men: %d, " .
+                                "Returnee Girls: %d, Returnee Boys: %d, Returnee Women: %d, Returnee Men: %d, " .
+                                "Returnee Elderly Women: %d, Returnee Elderly Men: %d, " .
+                                "Host Community Girls: %d, Host Community Boys: %d, Host Community Women: %d, Host Community Men: %d, " .
+                                "Host Community Elderly Women: %d, Host Community Elderly Men: %d\n",
+                            $row['Response_Year'] ?? 'N/A',
+                            $row['Sector'] ?? 'N/A',
+                            ($row['LGA'] ?? $row['State'] ?? 'N/A'),
+                            $row['IDP_Girls'] ?? 0,
+                            $row['IDP_Boys'] ?? 0,
+                            $row['IDP_Women'] ?? 0,
+                            $row['IDP_Men'] ?? 0,
+                            $row['IDP_Elderly_Women'] ?? 0,
+                            $row['IDP_Elderly_Men'] ?? 0,
+                            $row['Returnee_Girls'] ?? 0,
+                            $row['Returnee_Boys'] ?? 0,
+                            $row['Returnee_Women'] ?? 0,
+                            $row['Returnee_Men'] ?? 0,
+                            $row['Returnee_Elderly_Women'] ?? 0,
+                            $row['Returnee_Elderly_Men'] ?? 0,
+                            $row['Host_Community_Girls'] ?? 0,
+                            $row['Host_Community_Boys'] ?? 0,
+                            $row['Host_Community_Women'] ?? 0,
+                            $row['Host_Community_Men'] ?? 0,
+                            $row['Host_Community_Elderly_Women'] ?? 0,
+                            $row['Host_Community_Elderly_Men'] ?? 0
+                        );
+                    }
                 }
             }
-            $prompt = "You are FREDOMETER ASSISTANT, an expert on the pindata table (People in Need Data) in the fredometer database. User asked: '$message'\n\nTable structures:\n$table_structure\n\n$data_summary\nSince the question mentions 'in need,' focus exclusively on the pindata table, which details populations requiring assistance (e.g., IDP_Women, Returnee_Women, Host_Community_Women in need). Provide a precise, conversational answer with Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate, using only pindata to answer accurately, focusing on specific values or columns mentioned (e.g., LGA like Fufore, Sector like Health, IDP_Women). If no data is relevant in pindata, explain clearly and suggest related questions about pindata, such as 'People in need in Fufore' or 'IDP Women in need in Health sector.'";
+            $prompt = "You are FREDOMETER ASSISTANT, an expert on demographic and assistance data. User asked: '$message'\n\n$data_summary\nSince the question mentions 'in need,' focus exclusively on data about populations requiring assistance (e.g., women, men, girls, boys in need). Provide a precise, conversational answer with Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate, using only the provided data to answer accurately, focusing on specific values mentioned (e.g., locations like Fufore, sectors like Health). For numerical queries (e.g., 'number of women'), sum the relevant totals unless 'in detailed' is specified, in which case provide a detailed breakdown. Avoid multiplication unless explicitly requested (e.g., 'multiply'). If no data is relevant, explain clearly and suggest related questions, such as 'People requiring assistance in Fufore' or 'Women in need in Health sector.'";
         } else {
-            // Summarize data from all tables for other related questions
+            // Summarize data for other related questions
+            $data_summary = "Relevant demographic and assistance data:\n";
+            $has_data = false;
+
+            // Handle duplicate values across sources
             $value_note = "";
             $tables_with_value = [];
             if (count(array_filter($data, fn($rows) => !empty($rows))) > 1) {
@@ -384,23 +399,86 @@ function buildPayload($message, $data, $is_related, $is_in_need = false)
                         }
                     }
                     if (count($matches) > 1) {
-                        $tables_with_value[] = sprintf("The value '%s' in column '%s' appears in %s.", $message, $col_key, implode(", ", $matches));
+                        $tables_with_value[] = sprintf("The value '%s' in column '%s' appears in multiple data sources.", $message, $col_key);
                     }
                 }
                 if (!empty($tables_with_value)) {
-                    $value_note = "Note: " . implode(" ", $tables_with_value) . " baselinedata provides general demographic data, pindata details People in Need Data (populations requiring assistance), and severitydata tracks severity metrics.\n\n";
+                    $value_note = "Note: " . implode(" ", $tables_with_value) . " Some data represents general demographics, some details populations requiring assistance, and some tracks severity metrics.\n\n";
+                    $data_summary .= $value_note;
                 }
             }
 
-            $data_summary = $value_note . "Relevant data from baselinedata, pindata, and severitydata:\n";
-            if (empty($data['baselinedata']) && empty($data['pindata']) && empty($data['severitydata'])) {
-                $data_summary .= "No specific data found for the query.\n";
-            } else {
-                if (!empty($data['baselinedata'])) {
-                    $data_summary .= "**From baselinedata** (general demographic data):\n";
+            // Process baselinedata
+            if (!empty($data['baselinedata'])) {
+                $has_data = true;
+                $sums = [
+                    'IDP_Girls' => 0,
+                    'IDP_Boys' => 0,
+                    'IDP_Women' => 0,
+                    'IDP_Men' => 0,
+                    'IDP_Elderly_Women' => 0,
+                    'IDP_Elderly_Men' => 0,
+                    'Returnee_Girls' => 0,
+                    'Returnee_Boys' => 0,
+                    'Returnee_Women' => 0,
+                    'Returnee_Men' => 0,
+                    'Returnee_Elderly_Women' => 0,
+                    'Returnee_Elderly_Men' => 0,
+                    'Host_Community_Girls' => 0,
+                    'Host_Community_Boys' => 0,
+                    'Host_Community_Women' => 0,
+                    'Host_Community_Men' => 0,
+                    'Host_Community_Elderly_Women' => 0,
+                    'Host_Community_Elderly_Men' => 0
+                ];
+                $locations = [];
+                $years = [];
+
+                foreach ($data['baselinedata'] as $row) {
+                    foreach ($sums as $key => &$value) {
+                        $value += $row[$key] ?? 0;
+                    }
+                    if (!empty($row['State']) || !empty($row['LGA'])) {
+                        $locations[] = ($row['LGA'] ?? $row['State'] ?? 'Unknown');
+                    }
+                    if (!empty($row['Response_Year'])) {
+                        $years[$row['Response_Year']] = true;
+                    }
+                }
+
+                if (!$is_detailed) {
+                    if (strpos(strtolower($message), 'women') !== false) {
+                        $total_women = $sums['IDP_Women'] + $sums['Returnee_Women'] + $sums['Host_Community_Women'] +
+                            $sums['IDP_Elderly_Women'] + $sums['Returnee_Elderly_Women'] + $sums['Host_Community_Elderly_Women'];
+                        $data_summary .= sprintf("Total women: %d\n", $total_women);
+                    } elseif (strpos(strtolower($message), 'men') !== false) {
+                        $total_men = $sums['IDP_Men'] + $sums['Returnee_Men'] + $sums['Host_Community_Men'] +
+                            $sums['IDP_Elderly_Men'] + $sums['Returnee_Elderly_Men'] + $sums['Host_Community_Elderly_Men'];
+                        $data_summary .= sprintf("Total men: %d\n", $total_men);
+                    } elseif (strpos(strtolower($message), 'girls') !== false) {
+                        $total_girls = $sums['IDP_Girls'] + $sums['Returnee_Girls'] + $sums['Host_Community_Girls'];
+                        $data_summary .= sprintf("Total girls: %d\n", $total_girls);
+                    } elseif (strpos(strtolower($message), 'boys') !== false) {
+                        $total_boys = $sums['IDP_Boys'] + $sums['Returnee_Boys'] + $sums['Host_Community_Boys'];
+                        $data_summary .= sprintf("Total boys: %d\n", $total_boys);
+                    } else {
+                        foreach ($sums as $key => $value) {
+                            if (strpos(strtolower($message), strtolower(str_replace('_', ' ', $key))) !== false && $value > 0) {
+                                $data_summary .= sprintf("Total %s: %d\n", str_replace('_', ' ', $key), $value);
+                            }
+                        }
+                    }
+                    if (!empty($locations)) {
+                        $data_summary .= sprintf("Locations: %s\n", implode(', ', array_unique($locations)));
+                    }
+                    if (!empty($years)) {
+                        $data_summary .= sprintf("Years: %s\n", implode(', ', array_keys($years)));
+                    }
+                } else {
+                    $data_summary .= "Detailed demographic data:\n";
                     foreach ($data['baselinedata'] as $row) {
                         $data_summary .= sprintf(
-                            "- Year: %s, State: %s, State_Pcode: %s, LGA: %s, LGA_Pcode: %s, " .
+                            "- Year: %s, Location: %s, " .
                                 "IDP Girls: %d, IDP Boys: %d, IDP Women: %d, IDP Men: %d, " .
                                 "IDP Elderly Women: %d, IDP Elderly Men: %d, " .
                                 "Returnee Girls: %d, Returnee Boys: %d, Returnee Women: %d, Returnee Men: %d, " .
@@ -408,10 +486,7 @@ function buildPayload($message, $data, $is_related, $is_in_need = false)
                                 "Host Community Girls: %d, Host Community Boys: %d, Host Community Women: %d, Host Community Men: %d, " .
                                 "Host Community Elderly Women: %d, Host Community Elderly Men: %d\n",
                             $row['Response_Year'] ?? 'N/A',
-                            $row['State'] ?? 'N/A',
-                            $row['State_Pcode'] ?? 'N/A',
-                            $row['LGA'] ?? 'N/A',
-                            $row['LGA_Pcode'] ?? 'N/A',
+                            ($row['LGA'] ?? $row['State'] ?? 'N/A'),
                             $row['IDP_Girls'] ?? 0,
                             $row['IDP_Boys'] ?? 0,
                             $row['IDP_Women'] ?? 0,
@@ -433,11 +508,86 @@ function buildPayload($message, $data, $is_related, $is_in_need = false)
                         );
                     }
                 }
-                if (!empty($data['pindata'])) {
-                    $data_summary .= "**From pindata** (People in Need Data):\n";
+            }
+
+            // Process pindata
+            if (!empty($data['pindata'])) {
+                $has_data = true;
+                $sums = [
+                    'IDP_Girls' => 0,
+                    'IDP_Boys' => 0,
+                    'IDP_Women' => 0,
+                    'IDP_Men' => 0,
+                    'IDP_Elderly_Women' => 0,
+                    'IDP_Elderly_Men' => 0,
+                    'Returnee_Girls' => 0,
+                    'Returnee_Boys' => 0,
+                    'Returnee_Women' => 0,
+                    'Returnee_Men' => 0,
+                    'Returnee_Elderly_Women' => 0,
+                    'Returnee_Elderly_Men' => 0,
+                    'Host_Community_Girls' => 0,
+                    'Host_Community_Boys' => 0,
+                    'Host_Community_Women' => 0,
+                    'Host_Community_Men' => 0,
+                    'Host_Community_Elderly_Women' => 0,
+                    'Host_Community_Elderly_Men' => 0
+                ];
+                $sectors = [];
+                $locations = [];
+                $years = [];
+
+                foreach ($data['pindata'] as $row) {
+                    foreach ($sums as $key => &$value) {
+                        $value += $row[$key] ?? 0;
+                    }
+                    if (!empty($row['Sector'])) {
+                        $sectors[$row['Sector']] = true;
+                    }
+                    if (!empty($row['State']) || !empty($row['LGA'])) {
+                        $locations[] = ($row['LGA'] ?? $row['State'] ?? 'Unknown');
+                    }
+                    if (!empty($row['Response_Year'])) {
+                        $years[$row['Response_Year']] = true;
+                    }
+                }
+
+                if (!$is_detailed) {
+                    if (strpos(strtolower($message), 'women') !== false) {
+                        $total_women = $sums['IDP_Women'] + $sums['Returnee_Women'] + $sums['Host_Community_Women'] +
+                            $sums['IDP_Elderly_Women'] + $sums['Returnee_Elderly_Women'] + $sums['Host_Community_Elderly_Women'];
+                        $data_summary .= sprintf("Total women requiring assistance: %d\n", $total_women);
+                    } elseif (strpos(strtolower($message), 'men') !== false) {
+                        $total_men = $sums['IDP_Men'] + $sums['Returnee_Men'] + $sums['Host_Community_Men'] +
+                            $sums['IDP_Elderly_Men'] + $sums['Returnee_Elderly_Men'] + $sums['Host_Community_Elderly_Men'];
+                        $data_summary .= sprintf("Total men requiring assistance: %d\n", $total_men);
+                    } elseif (strpos(strtolower($message), 'girls') !== false) {
+                        $total_girls = $sums['IDP_Girls'] + $sums['Returnee_Girls'] + $sums['Host_Community_Girls'];
+                        $data_summary .= sprintf("Total girls requiring assistance: %d\n", $total_girls);
+                    } elseif (strpos(strtolower($message), 'boys') !== false) {
+                        $total_boys = $sums['IDP_Boys'] + $sums['Returnee_Boys'] + $sums['Host_Community_Boys'];
+                        $data_summary .= sprintf("Total boys requiring assistance: %d\n", $total_boys);
+                    } else {
+                        foreach ($sums as $key => $value) {
+                            if (strpos(strtolower($message), strtolower(str_replace('_', ' ', $key))) !== false && $value > 0) {
+                                $data_summary .= sprintf("Total %s requiring assistance: %d\n", str_replace('_', ' ', $key), $value);
+                            }
+                        }
+                    }
+                    if (!empty($sectors)) {
+                        $data_summary .= sprintf("Sectors: %s\n", implode(', ', array_keys($sectors)));
+                    }
+                    if (!empty($locations)) {
+                        $data_summary .= sprintf("Locations: %s\n", implode(', ', array_unique($locations)));
+                    }
+                    if (!empty($years)) {
+                        $data_summary .= sprintf("Years: %s\n", implode(', ', array_keys($years)));
+                    }
+                } else {
+                    $data_summary .= "Detailed data for populations requiring assistance:\n";
                     foreach ($data['pindata'] as $row) {
                         $data_summary .= sprintf(
-                            "- Year: %s, Sector: %s, State: %s, State_Pcode: %s, LGA: %s, LGA_pCode: %s, " .
+                            "- Year: %s, Sector: %s, Location: %s, " .
                                 "IDP Girls: %d, IDP Boys: %d, IDP Women: %d, IDP Men: %d, " .
                                 "IDP Elderly Women: %d, IDP Elderly Men: %d, " .
                                 "Returnee Girls: %d, Returnee Boys: %d, Returnee Women: %d, Returnee Men: %d, " .
@@ -446,10 +596,7 @@ function buildPayload($message, $data, $is_related, $is_in_need = false)
                                 "Host Community Elderly Women: %d, Host Community Elderly Men: %d\n",
                             $row['Response_Year'] ?? 'N/A',
                             $row['Sector'] ?? 'N/A',
-                            $row['State'] ?? 'N/A',
-                            $row['State_Pcode'] ?? 'N/A',
-                            $row['LGA'] ?? 'N/A',
-                            $row['LGA_pCode'] ?? 'N/A',
+                            ($row['LGA'] ?? $row['State'] ?? 'N/A'),
                             $row['IDP_Girls'] ?? 0,
                             $row['IDP_Boys'] ?? 0,
                             $row['IDP_Women'] ?? 0,
@@ -471,18 +618,60 @@ function buildPayload($message, $data, $is_related, $is_in_need = false)
                         );
                     }
                 }
-                if (!empty($data['severitydata'])) {
-                    $data_summary .= "**From severitydata** (severity metrics):\n";
+            }
+
+            // Process severitydata
+            if (!empty($data['severitydata'])) {
+                $has_data = true;
+                $sums = [
+                    'IDP' => 0,
+                    'Returnees' => 0,
+                    'Host_Community' => 0,
+                    'Final' => 0
+                ];
+                $sectors = [];
+                $locations = [];
+                $years = [];
+
+                foreach ($data['severitydata'] as $row) {
+                    foreach ($sums as $key => &$value) {
+                        $value += $row[$key] ?? 0;
+                    }
+                    if (!empty($row['Sector'])) {
+                        $sectors[$row['Sector']] = true;
+                    }
+                    if (!empty($row['State']) || !empty($row['LGA'])) {
+                        $locations[] = ($row['LGA'] ?? $row['State'] ?? 'Unknown');
+                    }
+                    if (!empty($row['Response_Year'])) {
+                        $years[$row['Response_Year']] = true;
+                    }
+                }
+
+                if (!$is_detailed) {
+                    foreach ($sums as $key => $value) {
+                        if (strpos(strtolower($message), strtolower(str_replace('_', ' ', $key))) !== false && $value > 0) {
+                            $data_summary .= sprintf("Total %s: %d\n", str_replace('_', ' ', $key), $value);
+                        }
+                    }
+                    if (!empty($sectors)) {
+                        $data_summary .= sprintf("Sectors: %s\n", implode(', ', array_keys($sectors)));
+                    }
+                    if (!empty($locations)) {
+                        $data_summary .= sprintf("Locations: %s\n", implode(', ', array_unique($locations)));
+                    }
+                    if (!empty($years)) {
+                        $data_summary .= sprintf("Years: %s\n", implode(', ', array_keys($years)));
+                    }
+                } else {
+                    $data_summary .= "Detailed severity data:\n";
                     foreach ($data['severitydata'] as $row) {
                         $data_summary .= sprintf(
-                            "- Year: %s, Sector: %s, State: %s, State_Pcode: %s, LGA: %s, LGA_pCode: %s, " .
+                            "- Year: %s, Sector: %s, Location: %s, " .
                                 "IDP: %d, Returnees: %d, Host Community: %d, Final: %d\n",
                             $row['Response_Year'] ?? 'N/A',
                             $row['Sector'] ?? 'N/A',
-                            $row['State'] ?? 'N/A',
-                            $row['State_Pcode'] ?? 'N/A',
-                            $row['LGA'] ?? 'N/A',
-                            $row['LGA_pCode'] ?? 'N/A',
+                            ($row['LGA'] ?? $row['State'] ?? 'N/A'),
                             $row['IDP'] ?? 0,
                             $row['Returnees'] ?? 0,
                             $row['Host_Community'] ?? 0,
@@ -491,10 +680,15 @@ function buildPayload($message, $data, $is_related, $is_in_need = false)
                     }
                 }
             }
-            $prompt = "You are FREDOMETER ASSISTANT, an expert on the baselinedata, pindata, and severitydata tables in the fredometer database. User asked: '$message'\n\nTable structures:\n$table_structure\n\n$data_summary\nProvide a precise, conversational answer with Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate. Use the table structures and data to answer accurately, focusing on the specific values or columns mentioned (e.g., LGA like Fufore, State_Pcode like NG002, Sector like Health, IDP, Final). Note that pindata represents People in Need Data, detailing populations requiring assistance. If a value appears in multiple tables, note this as shown in the data summary and explain the context of each table (baselinedata: demographics, pindata: People in Need Data, severitydata: severity metrics). If no data is relevant, explain clearly and suggest related questions about any of the three tables.";
+
+            if (!$has_data) {
+                $data_summary .= "No specific data found for the query.\n";
+            }
+
+            $prompt = "You are FREDOMETER ASSISTANT, an expert on demographic and assistance data. User asked: '$message'\n\n$data_summary\nProvide a precise, conversational answer with Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate, using the provided data to answer accurately, focusing on specific values mentioned (e.g., locations like Fufore, sectors like Health, metrics like Final). For numerical queries (e.g., 'number of IDP Girls'), sum the relevant totals unless 'in detailed' is specified, in which case provide a detailed breakdown. Avoid multiplication unless explicitly requested (e.g., 'multiply'). If a value appears in multiple data sources, note this as shown in the data summary and explain the context (e.g., demographics vs. assistance needs vs. severity metrics). If no data is relevant, explain clearly and suggest related questions, such as 'IDP Girls in Fufore' or 'Final metric in Health sector.'";
         }
     } else {
-        $prompt = "You are FREDOMETER ASSISTANT, a knowledgeable AI specialized in the baselinedata, pindata, and severitydata tables in the fredometer database. User asked: '$message'\n\nThis question does not appear to be related to the fredometer database. Provide a concise, accurate, and conversational answer to the user's question using Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate. If the question is vague, offer a clear response and suggest asking about the fredometer database (e.g., **IDP_Girls**, **LGA** like Fufore, **Sector** like Health, or **People in Need** in pindata) for more specific insights.";
+        $prompt = "You are FREDOMETER ASSISTANT, a knowledgeable AI. User asked: '$message'\n\nThis question does not appear to be related to demographic or assistance data. Provide a concise, accurate, and conversational answer to the user's question using Markdown formatting (e.g., **bold**, *italic*, [links](url)) where appropriate. If the question is vague, offer a clear response and suggest asking about demographic or assistance data (e.g., **IDP Girls** in Fufore, **Women requiring assistance** in Health sector, or **Final** metrics) for more specific insights.";
     }
     return [
         'contents' => [
